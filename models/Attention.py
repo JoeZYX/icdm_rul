@@ -46,6 +46,21 @@ class LocalMask():
     def mask(self):
         return self._mask
 
+
+class LocalSymmetryMask():
+    def __init__(self, B, L, device="cpu"):
+        with torch.no_grad():
+            window_size = math.ceil(1.2*np.log2(L)/2)  #halb
+            mask = torch.ones((L, L)).to(device)
+            mask = torch.triu(mask,-window_size).T
+            mask = torch.triu(mask,-window_size)
+            mask = mask==0
+            mask = torch.unsqueeze(mask, 0)
+            self._mask = mask.expand(B, 1, L, L).to(device)  
+    @property            
+    def mask(self):
+        return self._mask
+
 class LocalLogSymmetryMask():
     def __init__(self, B, L, device="cpu"):
         with torch.no_grad():
@@ -91,21 +106,6 @@ class LocalLogSymmetryMask():
     def mask(self):
         return self._mask
 
-
-class LocalSymmetryMask():
-    def __init__(self, B, L, device="cpu"):
-        with torch.no_grad():
-            window_size = math.ceil(1.2*np.log2(L)/2)  #halb
-            mask = torch.ones((L, L)).to(device)
-            mask = torch.triu(mask,-window_size).T
-            mask = torch.triu(mask,-window_size)
-            mask = mask==0
-            mask = torch.unsqueeze(mask, 0)
-            self._mask = mask.expand(B, 1, L, L).to(device)  
-    @property            
-    def mask(self):
-        return self._mask
-
 class LocalLogMask():
     def __init__(self, B, L, device="cpu"):
         with torch.no_grad():
@@ -122,7 +122,8 @@ class LocalLogMask():
         mask = torch.zeros((L), dtype=torch.float)
 
         if((index - local_window_size + 1) < 0):
-            mask[:index] = 1 # Local attention
+            mask[:index+1] = 1 # Local attention
+
         else:
             mask[index - local_window_size + 1:(index + 1)] = 1  # Local attention
 
