@@ -26,7 +26,7 @@ class Weighted_MSE_Loss(nn.Module):
         mu = seq_length
         y = stats.norm.pdf(x, mu, self.sigma)
         #y = 2*np.max(y)-y
-        y = y + np.max(y)/2
+        y = y + np.max(y)/15
         y = y/np.sum(y)*seq_length
         plt.plot(x, y)
         plt.show()
