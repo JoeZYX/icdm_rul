@@ -15,16 +15,18 @@ from time import time
 
 class Weighted_MSE_Loss(nn.Module):
     
-    def __init__(self, seq_length=40, sigma_faktor=1.5, device = "cuda"):
+    def __init__(self, seq_length=40, sigma_faktor=10, device = "cuda"):
         super(Weighted_MSE_Loss, self).__init__()
         self.seq_length = seq_length
         self.sigma      = seq_length/sigma_faktor
         
         x = np.linspace(1, seq_length, seq_length)
         #mu = self.seq_length/2
-        mu = 0
+        # mu = 0
+        mu = seq_length
         y = stats.norm.pdf(x, mu, self.sigma)
-        y = 2*np.max(y)-y
+        #y = 2*np.max(y)-y
+        y = y + np.max(y)/2
         y = y/np.sum(y)*seq_length
         plt.plot(x, y)
         plt.show()
