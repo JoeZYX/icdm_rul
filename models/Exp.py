@@ -225,6 +225,7 @@ class Exp_TStransformer(object):
                               MAXLIFE          = args.MAXLIFE,
                               flag             = flag,
                               difference       = args.difference,
+                              diff_periods     = args.diff_periods,
                               normalization    = args.normalization,
                               validation       = args.validation)
 

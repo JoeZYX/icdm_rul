@@ -99,9 +99,32 @@ def Cmapss_test_batch_generator(test_data, sequence_length=5):
         
 
     return np.array(x_batch), np.array(y_batch)
+	
+	
+def cal_diff(df, sensor_name,diff_periods = 1):
+
+    sensor_diff = []
+
+    for _id in set(df['engine_id']):
+        trainFD001_of_one_id =  df[df['engine_id'] == _id]
+        s = pd.Series(trainFD001_of_one_id[sensor_name])
+
+        if len(s)>diff_periods:
+            sensor_diff_temp=s.diff(periods=diff_periods)
+
+            for i in range(diff_periods):
+                sensor_diff.append(s.iloc[i]-s.iloc[0])
+
+            for j in range (len(s)-diff_periods):
+                sensor_diff.append(sensor_diff_temp.iloc[diff_periods+j])
+        else:
+            for h in range(len(s)):
+                sensor_diff.append(s.iloc[h]-s.iloc[0])
+    return sensor_diff
+	
 
 def cmapss_data_loader(data_path, Data_id, sequence_length = 40,
-                       MAXLIFE=120, flag="train",difference=False,
+                       MAXLIFE=120, flag="train",difference=False, diff_periods = 1,
                        normalization="znorm",
                        validation=0.1):
 
@@ -120,6 +143,20 @@ def cmapss_data_loader(data_path, Data_id, sequence_length = 40,
     test_FD.columns = column_name
 
     RUL_FD = pd.read_table("{}/RUL_{}.txt".format(data_path,Data_id), header=None, delim_whitespace=True)
+	
+    # ---------------- difference ------------------------
+    if difference:
+        diff_columns = train_FD.columns[2:]
+        for i in range(len(diff_columns)):
+            sensor_name_temp = diff_columns[i]
+            diff = cal_diff(train_FD,sensor_name=sensor_name_temp) 
+            name = sensor_name_temp+'_diff'
+            train_FD[name] = diff
+        for i in range(len(diff_columns)):
+            sensor_name_temp = diff_columns[i]
+            diff = cal_diff(test_FD,sensor_name=sensor_name_temp) 
+            name = sensor_name_temp+'_diff'
+            test_FD[name] = diff
 
 
     # --------------- define the label for train and test ---------------
@@ -174,7 +211,7 @@ def cmapss_data_loader(data_path, Data_id, sequence_length = 40,
     #print(test_FD.shape)
 
 
-    # ---------------- difference ------------------------??????????????????????????????????????????
+
 
 
     # ---------------- Normalization --------------------------------
@@ -228,6 +265,7 @@ class CMAPSSData(Dataset):
                  MAXLIFE=120,
                  flag='train',
                  difference=False,
+                 diff_periods=1,
                  normalization='znorm',
                  validation=0.1):
         
@@ -237,6 +275,7 @@ class CMAPSSData(Dataset):
         self.sequence_length = sequence_length
         self.MAXLIFE         = MAXLIFE
         self.difference      = difference
+        self.diff_periods    = diff_periods
         self.flag            = flag
         self.validation      = validation
         self.normalization   = normalization
@@ -254,6 +293,7 @@ class CMAPSSData(Dataset):
                                             MAXLIFE         = self.MAXLIFE,
                                             flag            = self.flag,
                                             difference      = self.difference,
+                                            diff_periods    = self.diff_periods,											
                                             normalization   = self.normalization,
                                             validation      = self.validation)
         # data_x (n_samples, length, channel)  
