@@ -185,7 +185,8 @@ class Exp_TStransformer(object):
                                   norm                  = self.args.norm,
                                   se_block              = self.args.se_block,
                                   activation            = self.args.activation,
-                                  output_attention      = self.args.output_attention)
+                                  output_attention      = self.args.output_attention,
+                                  predictor_type        = self.args.predictor_type)
         else:
             raise NotImplementedError("late transformer") 
 

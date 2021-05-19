@@ -28,7 +28,8 @@ class TStransformer(nn.Module):
                  norm = "batch", 
                  se_block = False,
                  activation='relu', 
-                 output_attention = True):
+                 output_attention = True,
+                 predictor_type = "linear"):
         
         """
         enc_in : 输入给encoder的channel数，也就是最开始的channel数, 这个通过dataloader获得
@@ -63,6 +64,7 @@ class TStransformer(nn.Module):
         
         self.input_length          = input_length
         self.c_out                 = c_out
+        self.predictor_type        = predictor_type
         # Encoding
         
         self.enc_embedding = DataEmbedding(c_in = enc_in, 
@@ -90,10 +92,12 @@ class TStransformer(nn.Module):
         # 这里的输出是 （B， L, d_model） 
         #self.dec_embedding = DataEmbedding(dec_in, d_model)
         # elf.decoder = ??????????????
-
-        #self.predictor = FullPredictor(d_model, input_length).double()
-        self.predictor = LinearPredictor(d_model).double()
-        #self.predictor = ConvPredictor(d_model = d_model, pred_kernel = 3)
+        if self.predictor_type == "full":
+            self.predictor = FullPredictor(d_model, input_length).double()
+        if self.predictor_type == "linear":
+            self.predictor = LinearPredictor(d_model).double()
+        if self.predictor_type == "conv":
+            self.predictor = ConvPredictor(d_model = d_model, pred_kernel = 3).double()
 
 
 
