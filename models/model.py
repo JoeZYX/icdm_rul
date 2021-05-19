@@ -92,7 +92,8 @@ class TStransformer(nn.Module):
         # elf.decoder = ??????????????
 
         #self.predictor = FullPredictor(d_model, input_length).double()
-        self.predictor = LinearPredictor(d_model)
+        self.predictor = LinearPredictor(d_model).double()
+        #self.predictor = ConvPredictor(d_model = d_model, pred_kernel = 3)
 
 
 
