@@ -175,13 +175,13 @@ class EncoderLayer(nn.Module):
             paddding_y  = nn.functional.pad(y.permute(0, 2, 1), 
                                             pad=(forward_padding_size, forward_padding_size),
                                             mode='replicate')
-            y = self.dropout(self.activation1(self.conv1(y)))
+            y = self.dropout(self.activation1(self.conv1(paddding_y)))
             
             paddding_y  = nn.functional.pad(y, 
                                             pad=(forward_padding_size, forward_padding_size),
                                             mode='replicate')
             
-            y = self.dropout(self.activation2(self.conv2(y).permute(0, 2, 1)))
+            y = self.dropout(self.activation2(self.conv2(paddding_y).permute(0, 2, 1)))
 
             y = self.norm2(x+y)
         else:
@@ -191,13 +191,13 @@ class EncoderLayer(nn.Module):
             paddding_y  = nn.functional.pad(y, 
                                             pad=(forward_padding_size, forward_padding_size),
                                             mode='replicate') 
-            y = self.dropout(self.activation1(self.conv1(y)))    
+            y = self.dropout(self.activation1(self.conv1(paddding_y)))    
             
             
             paddding_y  = nn.functional.pad(y, 
                                             pad=(forward_padding_size, forward_padding_size),
                                             mode='replicate')           
-            y = self.dropout(self.activation2(self.conv2(y)))
+            y = self.dropout(self.activation2(self.conv2(paddding_y)))
             
             y = self.norm2(x+y).permute(0, 2, 1)  # B L  C 
             

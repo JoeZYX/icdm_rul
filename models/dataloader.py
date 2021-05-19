@@ -205,6 +205,7 @@ def cmapss_data_loader(data_path, Data_id, sequence_length = 40,
     # --------------- acoording to the labels of training dataset, delete redundant input sensors ---------------
 
     col_to_drop = identify_and_remove_unique_columns(train_FD)
+    print(col_to_drop)
     train_FD = train_FD.drop(col_to_drop,axis = 1)
     test_FD = test_FD.drop(col_to_drop,axis = 1)
     #print(train_FD.shape)

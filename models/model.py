@@ -6,6 +6,7 @@ import torch.nn.functional as F
 from models.Attention import AttentionLayer, MaskAttention, ProbAttention
 from models.Embedding import DataEmbedding
 from models.Encoder import Encoder,EncoderLayer
+from models.Predictor import FullPredictor, LinearPredictor, ConvPredictor
 
 class TStransformer(nn.Module):
     def __init__(self, 
@@ -85,29 +86,15 @@ class TStransformer(nn.Module):
                                              norm                  = self.norm,
                                              se_block              = self.se_block) for l in range(self.e_layers)]
                                ).double()
+
         # 这里的输出是 （B， L, d_model） 
-        # self.decoder = ??????????????
+        #self.dec_embedding = DataEmbedding(dec_in, d_model)
+        # elf.decoder = ??????????????
+
+        #self.predictor = FullPredictor(d_model, input_length).double()
+        self.predictor = LinearPredictor(d_model)
 
 
-        self.donwconv1 = nn.Conv1d(in_channels = d_model, 
-                                   out_channels = int(d_model/2), 
-                                   kernel_size  = 3).double() # 这里是因为最后输出是每一个时间步骤为1
-        self.activation1 = F.relu
-        self.norm1       = nn.BatchNorm1d(int(d_model/2))
-        
-
-        self.donwconv2 = nn.Conv1d(in_channels = int(d_model/2), 
-                                   out_channels = 1, 
-                                   kernel_size  = 3).double() # 这里是因为最后输出是每一个时间步骤为1    
-        self.activation2 = F.relu
-        self.norm2       = nn.BatchNorm1d(1)
-
-        self.predict = nn.Linear(in_features=self.input_length, 
-                                 out_features=self.c_out).double() #这里可以换成kernel比较大的conv1d
-								 
-        #self.predict = nn.Conv1d(in_channels = 1,
-        #                         out_channels = 1,
-        #                         kernel_size  = 5).double()
 
 
 
@@ -121,30 +108,10 @@ class TStransformer(nn.Module):
         
         enc_out = self.enc_embedding(x)
         enc_out, attns = self.encoder(enc_out)
-        #print(enc_out.shape)
-        paddding_enc_out  = nn.functional.pad(enc_out.permute(0, 2, 1), 
-                                              pad=(1, 1),
-                                              mode='replicate')
-        
-        enc_out = self.norm1(self.activation1(self.donwconv1(paddding_enc_out)))
-        
-        paddding_enc_out  = nn.functional.pad(enc_out,
-                                              pad=(1, 1),
-                                              mode='replicate')       
-        
 
-        enc_out = self.norm2(self.activation2(self.donwconv2(paddding_enc_out))).permute(0,2,1).squeeze()#.permute(0,2,1).squeeze()
-        # Conv 1d prediction       
-        #paddding_enc_out  = nn.functional.pad(enc_out,
-        #                                      pad=(2, 2),
-        #                                      mode='replicate')   
-											  
-        #enc_out = self.predict(paddding_enc_out).permute(0,2,1).squeeze()
-
-        # fully layer prediction 											  
-        enc_out = self.predict(enc_out) 
+        enc_out = self.predictor(enc_out)
 
         if self.output_attention:
             return enc_out, attns
         else:
-            return enc_out # [B, L, D]
+            return enc_out # [B, L, 1]
