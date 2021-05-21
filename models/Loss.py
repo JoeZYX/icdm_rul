@@ -45,6 +45,8 @@ class HTSLoss(nn.Module):
     def __init__(self, 
                  enc_pred_loss = "MSE", 
                  final_pred_loss = "WeightMSE", 
+                 seq_length = 40,
+                 sigma_faktor = 10,
                  final_smooth_loss = None,
                  d_layers = 2, 
                  lambda_final_pred = 2,
@@ -62,7 +64,10 @@ class HTSLoss(nn.Module):
             self.final_pred_criterion   =  None
             if final_pred_loss is not None:
                 print("final_pred_loss")
-                self.final_pred_criterion = criterion_dict[self.final_pred_loss]()
+                if final_pred_loss == "WeightMSE":
+                    self.final_pred_criterion = criterion_dict["WeightMSE"](seq_length, sigma_faktor)
+                else:
+                    self.final_pred_criterion = criterion_dict[self.final_pred_loss]()
             self.lambda_final_pred       = lambda_final_pred
 
 

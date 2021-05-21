@@ -268,6 +268,8 @@ class Exp_TStransformer(object):
         # 建立一个复杂的loss
         loss_criterion = HTSLoss(enc_pred_loss          = self.args.enc_pred_loss, 
                                  final_pred_loss        = self.args.final_pred_loss, 
+                                 seq_length             = self.args.sequence_length,
+                                 sigma_faktor           = 10,
                                  final_smooth_loss      = self.args.final_smooth_loss,
                                  d_layers               = self.args.d_layers, 
                                  lambda_final_pred      = self.args.lambda_final_pred,
