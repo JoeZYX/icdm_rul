@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 
 class Weighted_MSE_Loss(nn.Module):
     
-    def __init__(self, seq_length=40, sigma_faktor=10, device = "cuda"):
+    def __init__(self, seq_length=20, sigma_faktor=10, device = "cuda"):
         super(Weighted_MSE_Loss, self).__init__()
         self.seq_length = seq_length
         self.sigma      = seq_length/sigma_faktor
