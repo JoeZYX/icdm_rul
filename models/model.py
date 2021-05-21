@@ -142,6 +142,8 @@ class TStransformer(nn.Module):
         enc_out, attns = self.encoder(enc_out)
 
         enc_pred = self.predictor(enc_out) # 这里的形状是 【B,L】
+        if len(enc_pred.shape)==1:
+            enc_pred = torch.unsqueeze(enc_pred, 0)
 		
         if self.d_layers > 0:
             dec_in = torch.div(enc_pred,120) #除以最大maxlife
