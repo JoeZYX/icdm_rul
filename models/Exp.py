@@ -12,6 +12,7 @@ from models.model import TStransformer
 from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 from time import time
+from models.Loss import HTSLoss
 
 class Weighted_MSE_Loss(nn.Module):
     
@@ -186,7 +187,8 @@ class Exp_TStransformer(object):
                                   se_block              = self.args.se_block,
                                   activation            = self.args.activation,
                                   output_attention      = self.args.output_attention,
-                                  predictor_type        = self.args.predictor_type)
+                                  predictor_type        = self.args.predictor_type,
+                                  d_layers              = self.args.d_layers)
         else:
             raise NotImplementedError("late transformer") 
 
@@ -262,8 +264,14 @@ class Exp_TStransformer(object):
         model_optim = self._select_optimizer()
         
         # 选择优化的loss function
-        criterion =  self._select_criterion()
-        
+        #criterion =  self._select_criterion() #这里也需要改
+        # 建立一个复杂的loss
+        loss_criterion = HTSLoss(enc_pred_loss          = self.args.enc_pred_loss, 
+                                 final_pred_loss        = self.args.final_pred_loss, 
+                                 final_smooth_loss      = self.args.final_smooth_loss,
+                                 d_layers               = self.args.d_layers, 
+                                 lambda_final_pred      = self.args.lambda_final_pred,
+                                 lambda_final_smooth    = self.args.lambda_final_smooth)
         
         print("start training")
         for epoch in range(self.args.train_epochs):    
@@ -285,19 +293,22 @@ class Exp_TStransformer(object):
                     outputs = self.model(batch_x)[0]
                 else:
                     outputs = self.model(batch_x)
-
-                loss = criterion(outputs, batch_y)
+                # ----------------------------
+                #loss = criterion(outputs, batch_y) # loss function class!!!!!!
+                loss = loss_criterion(outputs, batch_y)
                 train_loss.append(loss.item())
     
                 loss.backward()
                 model_optim.step()
-
+                # ----------------------------
+				
+				
             end_time = time()	
             epoch_time = end_time - start_time
             train_loss = np.average(train_loss) # 这个整个epoch中的平均loss
             
-            vali_loss  = self.validation(self.vali_loader, criterion)
-
+            #vali_loss  = self.validation(self.vali_loader, criterion)
+            vali_loss  = self.validation(self.vali_loader, loss_criterion)
             print("Epoch: {0}, Steps: {1} | Train Loss: {2:.7f} Vali Loss: {3:.7f}. it takse {4:.7f} seconds".format(
                 epoch + 1, train_steps, train_loss, vali_loss, epoch_time))
             

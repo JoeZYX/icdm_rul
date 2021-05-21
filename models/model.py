@@ -29,7 +29,11 @@ class TStransformer(nn.Module):
                  se_block = False,
                  activation='relu', 
                  output_attention = True,
-                 predictor_type = "linear"):
+				 
+
+                 predictor_type = "linear",
+				 
+                 d_layers = 0):
         
         """
         enc_in : 输入给encoder的channel数，也就是最开始的channel数, 这个通过dataloader获得
@@ -65,6 +69,9 @@ class TStransformer(nn.Module):
         self.input_length          = input_length
         self.c_out                 = c_out
         self.predictor_type        = predictor_type
+		
+        self.d_layers              = d_layers
+
         # Encoding
         
         self.enc_embedding = DataEmbedding(c_in = enc_in, 
@@ -90,33 +97,63 @@ class TStransformer(nn.Module):
                                ).double()
 
         # 这里的输出是 （B， L, d_model） 
-        #self.dec_embedding = DataEmbedding(dec_in, d_model)
-        # elf.decoder = ??????????????
+
         if self.predictor_type == "full":
             self.predictor = FullPredictor(d_model, input_length).double()
         if self.predictor_type == "linear":
             self.predictor = LinearPredictor(d_model).double()
         if self.predictor_type == "conv":
             self.predictor = ConvPredictor(d_model = d_model, pred_kernel = 3).double()
-
-
-
-
-
-
-        
-        
+			
+        # Decoder 			
+        if self.d_layers > 0 :
+            self.dec_embedding = DataEmbedding(c_in = enc_in+1, 
+                                               d_model = d_model,
+                                               embedd_kernel_size=embedd_kernel_size,
+                                               dropout=dropout).double()
+											   
+            temp_attention_layer_types = attention_layer_types
+            for l in range(self.d_layers):
+                if l > 0:
+                    temp_attention_layer_types = []
+                decoder_list.append(DecoderLayer(self_attention_layer_types   = temp_attention_layer_types,
+                                                 cross_attention_layer_types  = self.attention_layer_types ,
+                                                 d_model                      = self.d_model,
+                                                 n_heads                      = self.n_heads,
+                                                 d_ff                         = self.d_ff,
+                                                 dropout                      = self.dropout,
+                                                 activation                   = self.activation,
+                                                 forward_kernel_size          = self.forward_kernel_size,
+                                                 value_kernel_size            = self.value_kernel_size,
+                                                 causal_kernel_size           = self.causal_kernel_size,
+                                                 output_attention             = self.output_attention))
+            self.decoder = Decoder(decoder_list).double()
+            self.final_predictor = LinearPredictor(d_model).double()
 
 
         
     def forward(self, x):
+        # x shape 是 batch， L， Enc_in
         
         enc_out = self.enc_embedding(x)
         enc_out, attns = self.encoder(enc_out)
 
-        enc_out = self.predictor(enc_out)
-
-        if self.output_attention:
-            return enc_out, attns
-        else:
-            return enc_out # [B, L, 1]
+        enc_pred = self.predictor(enc_out) # 这里的形状是 【B,L】
+		
+        if self.d_layers > 0:
+            dec_in = torch.div(enc_pred,120) #除以最大maxlife
+            dec_in = torch.unsqueeze(dec_in, 2)
+            dec_in  = torch.cat([x,dec_in],dim=-1)
+            dec_embed  = self.dec_embedding(dec_in) 
+            dec_out    = self.decoder(dec_embed, enc_out)
+            final_pred = self.final_predictor(dec_out)
+            if self.output_attention:
+                return enc_pred, final_pred, attns
+            else:
+                return enc_pred, final_pred # [B, L]		
+		
+        else :
+            if self.output_attention:
+                return enc_pred, attns
+            else:
+                return enc_pred # [B, L]
