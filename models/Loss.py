@@ -4,6 +4,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch
 import math
+import numpy as np
+import scipy.stats as stats
+import matplotlib.pyplot as plt
 
 
 class Weighted_MSE_Loss(nn.Module):
@@ -64,8 +67,11 @@ class HTSLoss(nn.Module):
 
 
             self.final_smooth_loss      =  final_smooth_loss
+
             if final_smooth_loss is not None:
                 print("final_smooth_loss")
+                self.final_smooth_criterion = None
+            else:
                 self.final_smooth_criterion = None
             self.lambda_final_smooth     = lambda_final_smooth
 

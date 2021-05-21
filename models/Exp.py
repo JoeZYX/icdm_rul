@@ -340,9 +340,10 @@ class Exp_TStransformer(object):
             else:
                 outputs = self.model(batch_x)
 
-            pred = outputs.detach()#.cpu()
+            pred = [i.detach() for i in outputs] #outputs.detach()#.cpu()
             true = batch_y.detach()#.cpu()
-
+            #print("pred.shape ",pred.shape)
+            #print("true.shape ",true.shape)
             loss = criterion(pred, true) 
 
             total_loss.append(loss.item())

@@ -6,6 +6,7 @@ import torch.nn.functional as F
 from models.Attention import AttentionLayer, MaskAttention, ProbAttention
 from models.Embedding import DataEmbedding
 from models.Encoder import Encoder,EncoderLayer
+from models.Decoder import DecoderLayer,Decoder
 from models.Predictor import FullPredictor, LinearPredictor, ConvPredictor
 
 class TStransformer(nn.Module):
@@ -113,6 +114,7 @@ class TStransformer(nn.Module):
                                                dropout=dropout).double()
 											   
             temp_attention_layer_types = attention_layer_types
+            decoder_list = []
             for l in range(self.d_layers):
                 if l > 0:
                     temp_attention_layer_types = []
@@ -148,12 +150,12 @@ class TStransformer(nn.Module):
             dec_out    = self.decoder(dec_embed, enc_out)
             final_pred = self.final_predictor(dec_out)
             if self.output_attention:
-                return enc_pred, final_pred, attns
+                return [enc_pred, final_pred], attns
             else:
-                return enc_pred, final_pred # [B, L]		
+                return [enc_pred, final_pred] # [B, L]		
 		
         else :
             if self.output_attention:
-                return enc_pred, attns
+                return [enc_pred], attns
             else:
-                return enc_pred # [B, L]
+                return [enc_pred] # [B, L]
