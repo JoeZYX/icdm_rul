@@ -90,12 +90,12 @@ class ConvPredictor(nn.Module):
                                     kernel       = 3)
 									
         self.conv_bn2   =  conv_bn( input_dim    = int(d_model/2),
-                                    output_dim   = 1,
+                                    output_dim   = int(d_model/4),
                                     kernel       = 3)
 									
 
 
-        self.predict = nn.Conv1d(in_channels = 1,
+        self.predict = nn.Conv1d(in_channels = int(d_model/4),
                                  out_channels = 1,
                                  kernel_size  = pred_kernel)
 	

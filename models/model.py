@@ -130,7 +130,8 @@ class TStransformer(nn.Module):
                                                  causal_kernel_size           = self.causal_kernel_size,
                                                  output_attention             = self.output_attention))
             self.decoder = Decoder(decoder_list).double()
-            self.final_predictor = LinearPredictor(d_model).double()
+            #self.final_predictor = LinearPredictor(d_model).double()
+            self.final_predictor = ConvPredictor(d_model).double()
 
 
         
