@@ -23,6 +23,7 @@ class Weighted_MSE_Loss(nn.Module):
         y = stats.norm.pdf(x, mu, self.sigma)
         #y = 2*np.max(y)-y
         y = y + np.max(y)/anteil
+        print(anteil, sigma_faktor)
         y = y/np.sum(y)*seq_length
         plt.plot(x, y)
         plt.show()
@@ -66,6 +67,7 @@ class HTSLoss(nn.Module):
             if final_pred_loss is not None:
                 print("final_pred_loss")
                 if final_pred_loss == "WeightMSE":
+                    print("WeightMSE")
                     self.final_pred_criterion = criterion_dict["WeightMSE"](seq_length, sigma_faktor, anteil)
                 else:
                     self.final_pred_criterion = criterion_dict[self.final_pred_loss]()
