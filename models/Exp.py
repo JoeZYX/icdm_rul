@@ -14,6 +14,7 @@ from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 from time import time
 from models.Loss import HTSLoss
+from sklearn.metrics import mean_squared_error
 
 class Weighted_MSE_Loss(nn.Module):
     
@@ -136,18 +137,18 @@ class Exp_TStransformer(object):
 
         self.device = self._acquire_device()
         
-        if self.args.flag == "train":
+        #if self.args.flag == "train":
         
             #self.train_data, self.train_loader = self._get_data(flag = 'train')
             #self.vali_data , self.vali_loader  = self._get_data(flag = "val")
             #self.input_dimension = self.train_data.data_channel
-            self.train_data, self.train_loader, self.vali_data , self.vali_loader = self._get_data(flag = 'train')
-            self.input_dimension = self.train_data.data_channel
+        self.train_data, self.train_loader, self.vali_data , self.vali_loader = self._get_data(flag = 'train')
+        self.input_dimension = self.train_data.data_channel
 
-        if self.args.flag == "test":
+        #if self.args.flag == "test":
             
-            self.test_data, self.test_loader = self._get_data(flag = 'test')   
-            self.input_dimension = self.test_data.data_channel
+        self.test_data, self.test_loader = self._get_data(flag = 'test')   
+            #self.input_dimension = self.test_data.data_channel
         
         
 
@@ -316,7 +317,8 @@ class Exp_TStransformer(object):
         loss_criterion = HTSLoss(enc_pred_loss          = self.args.enc_pred_loss, 
                                  final_pred_loss        = self.args.final_pred_loss, 
                                  seq_length             = self.args.sequence_length,
-                                 sigma_faktor           = 10,
+                                 sigma_faktor           = self.args.sigma_faktor,
+                                 anteil                 = self.args.anteil,
                                  final_smooth_loss      = self.args.final_smooth_loss,
                                  d_layers               = self.args.d_layers, 
                                  lambda_final_pred      = self.args.lambda_final_pred,
@@ -358,8 +360,12 @@ class Exp_TStransformer(object):
             
             #vali_loss  = self.validation(self.vali_loader, criterion)
             vali_loss  = self.validation(self.vali_loader, loss_criterion)
+
             print("Epoch: {0}, Steps: {1} | Train Loss: {2:.7f} Vali Loss: {3:.7f}. it takse {4:.7f} seconds".format(
                 epoch + 1, train_steps, train_loss, vali_loss, epoch_time))
+
+            test_performace = self.test(self.test_loader)
+            print("test performace of ", vali_loss, " is : ", test_performace)
             
             # 在每个epoch 结束的时候 进行查看需要停止和调整学习率
             early_stopping(vali_loss, self.model, path)
@@ -389,7 +395,7 @@ class Exp_TStransformer(object):
             else:
                 outputs = self.model(batch_x)
 
-            pred = [i.detach() for i in outputs] #outputs.detach()#.cpu()
+            pred = [j.detach() for j in outputs] #outputs.detach()#.cpu()
             true = batch_y.detach()#.cpu()
             #print("pred.shape ",pred.shape)
             #print("true.shape ",true.shape)
@@ -403,7 +409,37 @@ class Exp_TStransformer(object):
         self.model.train()
         return average_vali_loss
 
-#     def test(self, save_path):
+    def test(self, test_loader):
+        self.model.eval()
+
+        prediction = []
+        enc_pred  = []
+        gt = []
+        for i, (batch_x,batch_y) in enumerate(test_loader):
+            batch_x = batch_x.double().to(self.device)
+            batch_y = batch_y.double().to(self.device)
+
+            if self.args.output_attention:
+                outputs = self.model(batch_x)[0]
+            else:
+                outputs = self.model(batch_x)
+
+            batch_y = batch_y.detach().cpu().numpy()
+            enc   = outputs[0].detach().cpu().numpy()
+            final = outputs[1].detach().cpu().numpy()
+			
+            gt.append(batch_y)
+            prediction.append(final)
+            enc_pred.append(enc)
+
+        gt = np.concatenate(gt).reshape(-1,self.args.sequence_length)
+        prediction = np.concatenate(prediction).reshape(-1,self.args.sequence_length)
+        enc_pred = np.concatenate(enc_pred).reshape(-1,self.args.sequence_length)
+
+
+        average_test_loss = np.sqrt(mean_squared_error(prediction[:,-1],gt[:,-1]))
+        self.model.train()
+        return average_test_loss
 #         test_data, test_loader = self._get_data(flag='test')
 #         self.model.eval()
         

@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 
 class Weighted_MSE_Loss(nn.Module):
     
-    def __init__(self, seq_length=20, sigma_faktor=10, device = "cuda"):
+    def __init__(self, seq_length=20, sigma_faktor=10, anteil=15,device = "cuda"):
         super(Weighted_MSE_Loss, self).__init__()
         self.seq_length = seq_length
         self.sigma      = seq_length/sigma_faktor
@@ -22,7 +22,7 @@ class Weighted_MSE_Loss(nn.Module):
         mu = seq_length
         y = stats.norm.pdf(x, mu, self.sigma)
         #y = 2*np.max(y)-y
-        y = y + np.max(y)/15
+        y = y + np.max(y)/anteil
         y = y/np.sum(y)*seq_length
         plt.plot(x, y)
         plt.show()
@@ -47,6 +47,7 @@ class HTSLoss(nn.Module):
                  final_pred_loss = "WeightMSE", 
                  seq_length = 40,
                  sigma_faktor = 10,
+                 anteil      = 15,
                  final_smooth_loss = None,
                  d_layers = 2, 
                  lambda_final_pred = 2,
@@ -65,7 +66,7 @@ class HTSLoss(nn.Module):
             if final_pred_loss is not None:
                 print("final_pred_loss")
                 if final_pred_loss == "WeightMSE":
-                    self.final_pred_criterion = criterion_dict["WeightMSE"](seq_length, sigma_faktor)
+                    self.final_pred_criterion = criterion_dict["WeightMSE"](seq_length, sigma_faktor, anteil)
                 else:
                     self.final_pred_criterion = criterion_dict[self.final_pred_loss]()
             self.lambda_final_pred       = lambda_final_pred
