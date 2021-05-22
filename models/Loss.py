@@ -59,8 +59,10 @@ class HTSLoss(nn.Module):
 
         self.enc_pred_loss          =  enc_pred_loss   
         print("enc_pred_criterion")
-        self.enc_pred_criterion     =  criterion_dict[self.enc_pred_loss]()
-
+        if self.enc_pred_loss == "WeightMSE":
+            self.enc_pred_criterion     =  criterion_dict["WeightMSE"](seq_length, sigma_faktor, anteil)
+        else:
+            self.enc_pred_criterion     =  criterion_dict[self.enc_pred_loss]()
         if self.d_layers > 0:
             self.final_pred_loss        =  final_pred_loss  # this is a list , it can also be none, if it is none, d_layers should = 0
             self.final_pred_criterion   =  None
