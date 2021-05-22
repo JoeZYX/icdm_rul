@@ -7,7 +7,8 @@ from torch import optim
 import torch.nn as nn
 import scipy.stats as stats
 import math
-from models.dataloader import CMAPSSData
+#from models.dataloader import CMAPSSData
+from models.loaderData import CMAPSSData,cmapss_data_train_vali_loader
 from models.model import TStransformer
 from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
@@ -137,10 +138,12 @@ class Exp_TStransformer(object):
         
         if self.args.flag == "train":
         
-            self.train_data, self.train_loader = self._get_data(flag = 'train')
-            self.vali_data , self.vali_loader  = self._get_data(flag = "val")
+            #self.train_data, self.train_loader = self._get_data(flag = 'train')
+            #self.vali_data , self.vali_loader  = self._get_data(flag = "val")
+            #self.input_dimension = self.train_data.data_channel
+            self.train_data, self.train_loader, self.vali_data , self.vali_loader = self._get_data(flag = 'train')
             self.input_dimension = self.train_data.data_channel
-            
+
         if self.args.flag == "test":
             
             self.test_data, self.test_loader = self._get_data(flag = 'test')   
@@ -212,34 +215,78 @@ class Exp_TStransformer(object):
             
         criterion = self.criterion_dict[self.args.criterion]()
         return criterion
-
+		
     def _get_data(self, flag="train"):
         args = self.args
-        
         if flag == 'train':
-            # 只有train需要被shuffle
-            shuffle_flag = True
-        else:
-            shuffle_flag = False 
             
-        data_set = CMAPSSData(data_path        = args.data_path, 
-                              Data_id          = args.Data_id, 
-                              sequence_length  = args.sequence_length,
-                              MAXLIFE          = args.MAXLIFE,
-                              flag             = flag,
-                              difference       = args.difference,
-                              diff_periods     = args.diff_periods,
-                              normalization    = args.normalization,
-                              validation       = args.validation)
+            X_train, y_train, X_vali, y_vali = cmapss_data_train_vali_loader(data_path         = args.data_path, 
+                                                                             Data_id           = args.Data_id,
+                                                                             flag              = "train",
+                                                                             sequence_length   = args.sequence_length,
+                                                                             MAXLIFE           = args.MAXLIFE, 
+                                                                             difference        = args.difference, 
+                                                                             diff_periods      = args.diff_periods,
+                                                                             normalization     = args.normalization,
+                                                                             validation        = args.validation)
+            train_data_set = CMAPSSData(X_train, y_train)
+            vali_data_set  = CMAPSSData(X_vali, y_vali)
+			
+            train_data_loader = DataLoader(train_data_set, 
+                                           batch_size  = args.batch_size,
+                                           shuffle     = True,
+                                           num_workers = 0,
+                                           drop_last   = False)
+            vali_data_loader  = DataLoader(vali_data_set, 
+                                           batch_size  = args.batch_size,
+                                           shuffle     = False,
+                                           num_workers = 0,
+                                           drop_last   = False)
+            return train_data_set, train_data_loader, vali_data_set,vali_data_loader
+        else:
+            X_test, y_test = cmapss_data_train_vali_loader(data_path         = args.data_path, 
+                                                           Data_id           = args.Data_id,
+                                                           flag              = "test",
+                                                           sequence_length   = args.sequence_length,
+                                                           MAXLIFE           = args.MAXLIFE, 
+                                                           difference        = args.difference, 
+                                                           diff_periods      = args.diff_periods,
+                                                           normalization     = args.normalization,
+                                                           validation        = args.validation)
+            test_data_set  = CMAPSSData(X_test, y_test)
+            test_data_loader  = DataLoader(test_data_set, 
+                                           batch_size  = args.batch_size,
+                                           shuffle     = False,
+                                           num_workers = 0,
+                                           drop_last   = False)
+            return test_data_set, test_data_loader
+    #def _get_data(self, flag="train"):
+    #    args = self.args
+    #    
+    #    if flag == 'train':
+    #        # 只有train需要被shuffle
+    #        shuffle_flag = True
+    #    else:
+    #        shuffle_flag = False 
+    #        
+    #    data_set = CMAPSSData(data_path        = args.data_path, 
+    #                          Data_id          = args.Data_id, 
+    #                          sequence_length  = args.sequence_length,
+    #                          MAXLIFE          = args.MAXLIFE,
+    #                          flag             = flag,
+    #                          difference       = args.difference,
+    #                          diff_periods     = args.diff_periods,
+    #                          normalization    = args.normalization,
+    #                          validation       = args.validation)
 
 
-        data_loader = DataLoader(data_set, 
-                                 batch_size  =args.batch_size,
-                                 shuffle     =shuffle_flag,
-                                 num_workers =0,
-                                 drop_last   =False)
+    #    data_loader = DataLoader(data_set, 
+    #                             batch_size  =args.batch_size,
+    #                             shuffle     =shuffle_flag,
+    #                             num_workers =0,
+    #                             drop_last   =False)
 
-        return data_set, data_loader
+    #    return data_set, data_loader
     
     
     def train(self, save_path):

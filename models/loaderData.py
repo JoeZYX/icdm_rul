@@ -99,8 +99,8 @@ def Cmapss_test_batch_generator(test_data, sequence_length=5):
         
 
     return np.array(x_batch), np.array(y_batch)
-
-
+	
+	
 def cal_diff(df, sensor_name,diff_periods = 1):
 
     sensor_diff = []
@@ -121,12 +121,17 @@ def cal_diff(df, sensor_name,diff_periods = 1):
             for h in range(len(s)):
                 sensor_diff.append(s.iloc[h]-s.iloc[0])
     return sensor_diff
-	
 
-def cmapss_data_loader(data_path, Data_id, sequence_length = 40,
-                       MAXLIFE=120, flag="train",difference=False, diff_periods = 1,
-                       normalization="znorm",
-                       validation=0.1):
+
+def cmapss_data_train_vali_loader(data_path, 
+                                  Data_id, 
+                                  flag  = "train",
+                                  sequence_length = 40,
+                                  MAXLIFE=120, 
+                                  difference=False, 
+                                  diff_periods = 1,
+                                  normalization="znorm",
+                                  validation=0.1):
 
 
     # --------------- read the train data, test data and labels for test ---------------
@@ -143,7 +148,7 @@ def cmapss_data_loader(data_path, Data_id, sequence_length = 40,
     test_FD.columns = column_name
 
     RUL_FD = pd.read_table("{}/RUL_{}.txt".format(data_path,Data_id), header=None, delim_whitespace=True)
-	
+
     # ---------------- difference ------------------------
     if difference:
         diff_columns = train_FD.columns[2:]
@@ -208,12 +213,6 @@ def cmapss_data_loader(data_path, Data_id, sequence_length = 40,
     print(col_to_drop)
     train_FD = train_FD.drop(col_to_drop,axis = 1)
     test_FD = test_FD.drop(col_to_drop,axis = 1)
-    #print(train_FD.shape)
-    #print(test_FD.shape)
-
-
-
-
 
     # ---------------- Normalization --------------------------------
 
@@ -230,79 +229,29 @@ def cmapss_data_loader(data_path, Data_id, sequence_length = 40,
         test_FD.iloc[:, 2:-1] = (test_FD.iloc[:, 2:-1] - mean) / std
 
     # ------------------- batch generator -------------------------------
-    number_fo_id = len(train_FD["engine_id"].unique())
-    train_engine_id = train_FD["engine_id"].unique()[:int((number_fo_id)*(1-validation))]
-    valid_engine_id = train_FD["engine_id"].unique()[int((number_fo_id)*(1-validation)):]
+    
+    if flag == "train":    
 
-    if flag == "train":
-        data_df = pd.DataFrame()
-        for idx in train_engine_id:
-            temp = train_FD[train_FD["engine_id"]==idx]
-            data_df = pd.concat([data_df,temp])
-        data_df.reset_index(inplace=True,drop=True)    
-        data_x , data_y = Cmapss_train_vali_batch_generator(data_df,sequence_length)
-
-    elif flag == "val":
-        data_df = pd.DataFrame()
-        for idx in valid_engine_id:
-            temp = train_FD[train_FD["engine_id"]==idx]
-            data_df = pd.concat([data_df,temp])
-        data_df.reset_index(inplace=True,drop=True)    
-        data_x , data_y = Cmapss_train_vali_batch_generator(data_df,sequence_length)
-
+        data_x , data_y = Cmapss_train_vali_batch_generator(train_FD,sequence_length)
+        from sklearn.model_selection import train_test_split
+        X_train, X_vali, y_train, y_vali = train_test_split(data_x, data_y, test_size=validation, random_state=42)
+        print(X_train.shape)
+        return X_train, y_train, X_vali, y_vali
+        
     else:
         data_x, data_y = Cmapss_test_batch_generator(test_FD, sequence_length)
     
-    return data_x, data_y
-
+        return data_x, data_y
 
 
 class CMAPSSData(Dataset):
 
     def __init__(self, 
-                 data_path, 
-                 Data_id, 
-                 sequence_length=40,
-                 MAXLIFE=120,
-                 flag='train',
-                 difference=False,
-                 diff_periods=1,
-                 normalization='znorm',
-                 validation=0.1):
+                 data_x,
+                 data_y ):
         
-        
-        self.data_path       = data_path
-        self.Data_id         = Data_id
-        self.sequence_length = sequence_length
-        self.MAXLIFE         = MAXLIFE
-        self.difference      = difference
-        self.diff_periods    = diff_periods
-        self.flag            = flag
-        self.validation      = validation
-        self.normalization   = normalization
-        
-        
-        # check flag 
-
-        self.__read_data__()
-
-    def __read_data__(self):
-        print("load the data ", self.data_path," ",self.Data_id)
-        data_x, data_y = cmapss_data_loader(data_path       = self.data_path, 
-                                            Data_id         = self.Data_id,
-                                            sequence_length = self.sequence_length,
-                                            MAXLIFE         = self.MAXLIFE,
-                                            flag            = self.flag,
-                                            difference      = self.difference,
-                                            diff_periods    = self.diff_periods,											
-                                            normalization   = self.normalization,
-                                            validation      = self.validation)
-        # data_x (n_samples, length, channel)  
-        # data_y (n_samples, length)
-        print(self.flag, ": the shape of data_X is : ", data_x.shape)
-
-
         self.data_x = data_x
+        print(data_x.shape)
         self.data_y = data_y
         self.data_channel = data_x.shape[2]
     
@@ -310,7 +259,6 @@ class CMAPSSData(Dataset):
 
 
         sample_x = self.data_x[index]
-        #sample_y = self.data_y_original[index]
         sample_y = self.data_y[index]
 
 
@@ -318,4 +266,3 @@ class CMAPSSData(Dataset):
     
     def __len__(self):
         return len(self.data_x)
-
