@@ -17,22 +17,22 @@ def identify_and_remove_unique_columns(Dataframe):
     unique_counts = Dataframe.nunique()
     record_single_unique = pd.DataFrame(unique_counts[unique_counts == 1]).reset_index().rename(columns = {'index': 'feature', 0: 'nunique'})
     unique_to_drop = list(record_single_unique['feature'])
-    Dataframe = Dataframe.drop(columns = unique_to_drop)
+    #Dataframe = Dataframe.drop(columns = unique_to_drop)
     
 
-    unique_counts = Dataframe.nunique()
-    record_single_unique = pd.DataFrame(unique_counts).reset_index().rename(columns = {'index': 'feature', 0: 'nunique'})
-    record_single_unique["type"] = record_single_unique["nunique"].apply(lambda x:"real" if x>2 else "binary")
-    for i in range(record_single_unique.shape[0]):
-        col = record_single_unique.loc[i,"feature"]
-        _type = record_single_unique.loc[i,"type"]
-        if _type == "real":
-            p_value = target_real_feature_real_test(Dataframe[col], Dataframe["RUL"])
-        else:
-            le = preprocessing.LabelEncoder()
-            p_value = target_real_feature_binary_test(pd.Series(le.fit_transform(Dataframe[col])), Dataframe["RUL"])
-        if p_value>0.05:
-            unique_to_drop.append(col)
+    #unique_counts = Dataframe.nunique()
+    #record_single_unique = pd.DataFrame(unique_counts).reset_index().rename(columns = {'index': 'feature', 0: 'nunique'})
+    #record_single_unique["type"] = record_single_unique["nunique"].apply(lambda x:"real" if x>2 else "binary")
+    #for i in range(record_single_unique.shape[0]):
+    #    col = record_single_unique.loc[i,"feature"]
+    #    _type = record_single_unique.loc[i,"type"]
+    #    if _type == "real":
+    #        p_value = target_real_feature_real_test(Dataframe[col], Dataframe["RUL"])
+    #    else:
+    #        le = preprocessing.LabelEncoder()
+    #        p_value = target_real_feature_binary_test(pd.Series(le.fit_transform(Dataframe[col])), Dataframe["RUL"])
+    #    if p_value>0.05:
+    #        unique_to_drop.append(col)
     
     return  unique_to_drop
 
@@ -227,7 +227,17 @@ def cmapss_data_train_vali_loader(data_path,
 
         # Testing dataset
         test_FD.iloc[:, 2:-1] = (test_FD.iloc[:, 2:-1] - mean) / std
+    if normalization == "minmax":
+        min_ = train_FD.iloc[:, 2:-1].min()
+        max_ = train_FD.iloc[:, 2:-1].max()
+        dis  = max_- min_
+        dis.replace(0, 1, inplace=True)
 
+        # training dataset
+        train_FD.iloc[:, 2:-1] = (train_FD.iloc[:, 2:-1] - min_) / dis
+
+        # Testing dataset
+        test_FD.iloc[:, 2:-1] = (test_FD.iloc[:, 2:-1] - min_) / dis
     # ------------------- batch generator -------------------------------
     
     if flag == "train":    
