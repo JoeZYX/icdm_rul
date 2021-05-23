@@ -34,7 +34,8 @@ class TStransformer(nn.Module):
 
                  predictor_type = "linear",
 				 
-                 d_layers = 0):
+                 d_layers = 0
+                 add_raw  = False):
         
         """
         enc_in : 输入给encoder的channel数，也就是最开始的channel数, 这个通过dataloader获得
@@ -72,7 +73,7 @@ class TStransformer(nn.Module):
         self.predictor_type        = predictor_type
 		
         self.d_layers              = d_layers
-
+        self.add_raw               = add_raw
         # Encoding
         
         self.enc_embedding = DataEmbedding(c_in = enc_in, 
@@ -108,7 +109,11 @@ class TStransformer(nn.Module):
 			
         # Decoder 			
         if self.d_layers > 0 :
-            self.dec_embedding = DataEmbedding(c_in = enc_in+1, 
+            if self.add_raw:
+                dec_in_dimension = enc_in+1
+            else:
+                dec_in_dimension = 1
+            self.dec_embedding = DataEmbedding(c_in = dec_in_dimension, 
                                                d_model = d_model,
                                                embedd_kernel_size=embedd_kernel_size,
                                                dropout=dropout).double()
@@ -148,7 +153,8 @@ class TStransformer(nn.Module):
         if self.d_layers > 0:
             dec_in = torch.div(enc_pred,120) #除以最大maxlife
             dec_in = torch.unsqueeze(dec_in, 2)
-            dec_in  = torch.cat([x,dec_in],dim=-1)
+            if self.add_raw
+                dec_in  = torch.cat([x,dec_in],dim=-1)
             dec_embed  = self.dec_embedding(dec_in) 
             dec_out    = self.decoder(dec_embed, enc_out)
             final_pred = self.final_predictor(dec_out)

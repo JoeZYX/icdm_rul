@@ -192,7 +192,8 @@ class Exp_TStransformer(object):
                                   activation            = self.args.activation,
                                   output_attention      = self.args.output_attention,
                                   predictor_type        = self.args.predictor_type,
-                                  d_layers              = self.args.d_layers)
+                                  d_layers              = self.args.d_layers
+                                  add_raw               = self.args.add_raw)
         else:
             raise NotImplementedError("late transformer") 
 
