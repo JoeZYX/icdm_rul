@@ -106,7 +106,12 @@ class TStransformer(nn.Module):
             self.predictor = LinearPredictor(d_model).double()
         if self.predictor_type == "conv":
             self.predictor = ConvPredictor(d_model = d_model, pred_kernel = 3).double()
-			
+        if self.predictor_type == "hybrid":
+            self.predictor1 = FullPredictor(d_model, input_length).double()
+            self.predictor2 = LinearPredictor(d_model).double()
+            self.predictor3 = ConvPredictor(d_model = d_model, pred_kernel = 5).double()	
+            self.predictor  = nn.Conv1d(in_channels = 3, out_channels = 1, kernel_size  = 3).double()	
+
         # Decoder 			
         if self.d_layers > 0 :
             if self.add_raw:
@@ -146,6 +151,30 @@ class TStransformer(nn.Module):
         enc_out = self.enc_embedding(x)
         enc_out, attns = self.encoder(enc_out)
 
+        if self.predictor_type == "hybrid":
+            pred1 = self.predictor1(enc_out)
+            #print(pred1.shape)
+            if len(pred1.shape)==1:
+                pred1 = torch.unsqueeze(pred1, 0)
+            pred1 = torch.unsqueeze(pred1, 2)
+
+            pred2 = self.predictor2(enc_out)
+            #print(pred2.shape)
+            if len(pred2.shape)==1:
+                pred2 = torch.unsqueeze(pred2, 0)
+            pred2 = torch.unsqueeze(pred2, 2)
+
+            pred3 = self.predictor3(enc_out) 
+            #print(pred3.shape)
+            if len(pred3.shape)==1:
+                pred3 = torch.unsqueeze(pred3, 0)
+            pred3 = torch.unsqueeze(pred3, 2)
+
+            hybrid_pred = torch.cat([pred1,pred2,pred3],dim=-1) 
+            enc_out  = nn.functional.pad(hybrid_pred.permute(0, 2, 1), 
+                                         pad=(1, 1),
+                                         mode='replicate')
+	
         enc_pred = self.predictor(enc_out) # 这里的形状是 【B,L】
         if len(enc_pred.shape)==1:
             enc_pred = torch.unsqueeze(enc_pred, 0)
