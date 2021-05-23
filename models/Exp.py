@@ -192,7 +192,7 @@ class Exp_TStransformer(object):
                                   activation            = self.args.activation,
                                   output_attention      = self.args.output_attention,
                                   predictor_type        = self.args.predictor_type,
-                                  d_layers              = self.args.d_layers
+                                  d_layers              = self.args.d_layers,
                                   add_raw               = self.args.add_raw)
         else:
             raise NotImplementedError("late transformer") 
@@ -365,11 +365,12 @@ class Exp_TStransformer(object):
             print("Epoch: {0}, Steps: {1} | Train Loss: {2:.7f} Vali Loss: {3:.7f}. it takse {4:.7f} seconds".format(
                 epoch + 1, train_steps, train_loss, vali_loss, epoch_time))
             if self.args.d_layers > 0 :
-                average_final_loss, average_enc_loss = self.test(self.test_loader)
-                print("test performace of ", vali_loss, " is  final: ", average_final_loss, "  enc : " ,average_enc_loss)
+                average_final_loss,  average_final_overall_loss,  average_enc_loss,  average_enc_overall_loss = self.test(self.test_loader)
+                print("test performace of ", vali_loss, " is  final: ", average_final_loss, "  final overall : " ,average_final_overall_loss)
+                print("test performace of ", vali_loss, " is  enc: ", average_enc_loss, "  enc overall : " ,average_enc_overall_loss)
             else:
-                average_enc_loss = self.test(self.test_loader)
-                print("test performace of ", vali_loss, " is enc : " ,average_enc_loss)
+                average_enc_loss,  average_enc_overall_loss = self.test(self.test_loader)
+                print("test performace of ", vali_loss, " is  enc: ", average_enc_loss, "  enc overall : " ,average_enc_overall_loss)
             
             # 在每个epoch 结束的时候 进行查看需要停止和调整学习率
             early_stopping(vali_loss, self.model, path)
@@ -439,13 +440,15 @@ class Exp_TStransformer(object):
         gt = np.concatenate(gt).reshape(-1,self.args.sequence_length)
         enc_pred = np.concatenate(enc_pred).reshape(-1,self.args.sequence_length)
         average_enc_loss = np.sqrt(mean_squared_error(enc_pred[:,-1],gt[:,-1]))
+        average_enc_overall_loss = np.sqrt(mean_squared_error(enc_pred,gt))
         self.model.train()
         if self.args.d_layers > 0 :
             prediction = np.concatenate(prediction).reshape(-1,self.args.sequence_length)
             average_final_loss = np.sqrt(mean_squared_error(prediction[:,-1],gt[:,-1]))
-            return average_final_loss,average_enc_loss
+            average_final_overall_loss = np.sqrt(mean_squared_error(prediction,gt))
+            return average_final_loss,  average_final_overall_loss,  average_enc_loss,  average_enc_overall_loss
         else:
-            return average_enc_loss
+            return average_enc_loss, average_enc_overall_loss
 
 
 #         test_data, test_loader = self._get_data(flag='test')

@@ -34,7 +34,7 @@ class TStransformer(nn.Module):
 
                  predictor_type = "linear",
 				 
-                 d_layers = 0
+                 d_layers = 0,
                  add_raw  = False):
         
         """
@@ -153,7 +153,7 @@ class TStransformer(nn.Module):
         if self.d_layers > 0:
             dec_in = torch.div(enc_pred,120) #除以最大maxlife
             dec_in = torch.unsqueeze(dec_in, 2)
-            if self.add_raw
+            if self.add_raw:
                 dec_in  = torch.cat([x,dec_in],dim=-1)
             dec_embed  = self.dec_embedding(dec_in) 
             dec_out    = self.decoder(dec_embed, enc_out)
