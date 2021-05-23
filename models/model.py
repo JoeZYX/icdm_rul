@@ -109,7 +109,7 @@ class TStransformer(nn.Module):
         if self.predictor_type == "hybrid":
             self.predictor1 = FullPredictor(d_model, input_length).double()
             self.predictor2 = LinearPredictor(d_model).double()
-            self.predictor3 = ConvPredictor(d_model = d_model, pred_kernel = 5).double()	
+            self.predictor3 = ConvPredictor(d_model = d_model, pred_kernel = 3).double()	
             self.predictor  = nn.Conv1d(in_channels = 3, out_channels = 1, kernel_size  = 3).double()	
 
         # Decoder 			
@@ -174,8 +174,9 @@ class TStransformer(nn.Module):
             enc_out  = nn.functional.pad(hybrid_pred.permute(0, 2, 1), 
                                          pad=(1, 1),
                                          mode='replicate')
-	
-        enc_pred = self.predictor(enc_out) # 这里的形状是 【B,L】
+            enc_pred = self.predictor(enc_out).permute(0, 2, 1).squeeze()
+        else:
+            enc_pred = self.predictor(enc_out) # 这里的形状是 【B,L】
         if len(enc_pred.shape)==1:
             enc_pred = torch.unsqueeze(enc_pred, 0)
 		
