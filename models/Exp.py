@@ -192,6 +192,7 @@ class Exp_TStransformer(object):
                                   activation            = self.args.activation,
                                   output_attention      = self.args.output_attention,
                                   predictor_type        = self.args.predictor_type,
+                                  final_predictor_type  = self.args.final_predictor_type,
                                   d_layers              = self.args.d_layers,
                                   add_raw               = self.args.add_raw)
         else:
@@ -323,7 +324,9 @@ class Exp_TStransformer(object):
                                  final_smooth_loss      = self.args.final_smooth_loss,
                                  d_layers               = self.args.d_layers, 
                                  lambda_final_pred      = self.args.lambda_final_pred,
-                                 lambda_final_smooth    = self.args.lambda_final_smooth)
+                                 lambda_final_smooth    = self.args.lambda_final_smooth,
+                                 include_enc_loss       = self.args.include_enc_loss,
+                                 device                 = self.device)
         
         print("start training")
         for epoch in range(self.args.train_epochs):    

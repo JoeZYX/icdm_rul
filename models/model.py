@@ -33,6 +33,7 @@ class TStransformer(nn.Module):
 				 
 
                  predictor_type = "linear",
+                 final_predictor_type = "linear",
 				 
                  d_layers = 0,
                  add_raw  = False):
@@ -71,6 +72,7 @@ class TStransformer(nn.Module):
         self.input_length          = input_length
         self.c_out                 = c_out
         self.predictor_type        = predictor_type
+        self.final_predictor_type  = final_predictor_type
 		
         self.d_layers              = d_layers
         self.add_raw               = add_raw
@@ -141,7 +143,18 @@ class TStransformer(nn.Module):
                                                  output_attention             = self.output_attention))
             self.decoder = Decoder(decoder_list).double()
             #self.final_predictor = LinearPredictor(d_model).double()
-            self.final_predictor = ConvPredictor(d_model).double()
+            #self.final_predictor = ConvPredictor(d_model).double()
+            if self.final_predictor_type == "full":
+                self.final_predictor = FullPredictor(d_model, input_length).double()
+            if self.final_predictor_type == "linear":
+                self.final_predictor = LinearPredictor(d_model).double()
+            if self.final_predictor_type == "conv":
+                self.final_predictor = ConvPredictor(d_model = d_model, pred_kernel = 3).double()
+            if self.final_predictor_type == "hybrid":
+                self.final_predictor1 = FullPredictor(d_model, input_length).double()
+                self.final_predictor2 = LinearPredictor(d_model).double()
+                self.final_predictor3 = ConvPredictor(d_model = d_model, pred_kernel = 3).double()	
+                self.final_predictor  = nn.Conv1d(in_channels = 3, out_channels = 1, kernel_size  = 3).double()	
 
 
         
@@ -177,6 +190,7 @@ class TStransformer(nn.Module):
             enc_pred = self.predictor(enc_out).permute(0, 2, 1).squeeze()
         else:
             enc_pred = self.predictor(enc_out) # 这里的形状是 【B,L】
+
         if len(enc_pred.shape)==1:
             enc_pred = torch.unsqueeze(enc_pred, 0)
 		
@@ -186,8 +200,39 @@ class TStransformer(nn.Module):
             if self.add_raw:
                 dec_in  = torch.cat([x,dec_in],dim=-1)
             dec_embed  = self.dec_embedding(dec_in) 
-            dec_out    = self.decoder(dec_embed, enc_out)
-            final_pred = self.final_predictor(dec_out)
+            dec_out    = self.decoder(dec_embed, enc_out) #B L C
+
+
+            #final_pred = self.final_predictor(dec_out)
+
+
+            if self.final_predictor_type == "hybrid":
+                pred1 = self.final_predictor1(dec_out)
+                #print(pred1.shape)
+                if len(pred1.shape)==1:
+                    pred1 = torch.unsqueeze(pred1, 0)
+                pred1 = torch.unsqueeze(pred1, 2)
+
+                pred2 = self.final_predictor2(dec_out)
+                #print(pred2.shape)
+                if len(pred2.shape)==1:
+                    pred2 = torch.unsqueeze(pred2, 0)
+                pred2 = torch.unsqueeze(pred2, 2)
+
+                pred3 = self.final_predictor3(dec_out) 
+                #print(pred3.shape)
+                if len(pred3.shape)==1:
+                    pred3 = torch.unsqueeze(pred3, 0)
+                pred3 = torch.unsqueeze(pred3, 2)
+    
+                hybrid_pred = torch.cat([pred1,pred2,pred3],dim=-1) 
+                dec_out  = nn.functional.pad(hybrid_pred.permute(0, 2, 1), 
+                                             pad=(1, 1),
+                                             mode='replicate')
+                final_pred = self.final_predictor(dec_out).permute(0, 2, 1).squeeze()
+            else:
+                final_pred = self.final_predictor(dec_out)
+			
             if self.output_attention:
                 return [enc_pred, final_pred], attns
             else:

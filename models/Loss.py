@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 class Weighted_MSE_Loss(nn.Module):
     
     def __init__(self, seq_length=20, sigma_faktor=10, anteil=15,device = "cuda"):
+
         super(Weighted_MSE_Loss, self).__init__()
         self.seq_length = seq_length
         self.sigma      = seq_length/sigma_faktor
@@ -52,15 +53,17 @@ class HTSLoss(nn.Module):
                  final_smooth_loss = None,
                  d_layers = 2, 
                  lambda_final_pred = 2,
-                 lambda_final_smooth = 1):
+                 lambda_final_smooth = 1,
+                 include_enc_loss = False,
+                 device  = "cuda"):
 
         super(HTSLoss, self).__init__()
         self.d_layers               = d_layers
-
-        self.enc_pred_loss          =  enc_pred_loss   
+        self.include_enc_loss       = include_enc_loss
+        self.enc_pred_loss          = enc_pred_loss   
         print("enc_pred_criterion")
         if self.enc_pred_loss == "WeightMSE":
-            self.enc_pred_criterion     =  criterion_dict["WeightMSE"](seq_length, sigma_faktor, anteil)
+            self.enc_pred_criterion     =  criterion_dict["WeightMSE"](seq_length, sigma_faktor, anteil,device)
         else:
             self.enc_pred_criterion     =  criterion_dict[self.enc_pred_loss]()
         if self.d_layers > 0:
@@ -70,7 +73,7 @@ class HTSLoss(nn.Module):
                 print("final_pred_loss")
                 if final_pred_loss == "WeightMSE":
                     print("WeightMSE")
-                    self.final_pred_criterion = criterion_dict["WeightMSE"](seq_length, sigma_faktor, anteil)
+                    self.final_pred_criterion = criterion_dict["WeightMSE"](seq_length, sigma_faktor, anteil,device)
                 else:
                     self.final_pred_criterion = criterion_dict[self.final_pred_loss]()
             self.lambda_final_pred       = lambda_final_pred
@@ -98,13 +101,18 @@ class HTSLoss(nn.Module):
         else : 
             # yes decoder, there are two predictions one is prediction from encoder "enc_pred"
             #                                        one is prediction from decoder "final_pred"
-            enc_pred              = outputs[0]
-            final_pred            = outputs[1]
-            enc_pred_loss         = self.enc_pred_criterion(enc_pred, batch_y)
-            dec_pred_loss         = self.final_pred_criterion(final_pred, batch_y)
-            loss                  = enc_pred_loss + self.lambda_final_pred*dec_pred_loss
-            if self.final_smooth_criterion is not None:
-                smooth_loss       = self.final_smooth_criterion(final_pred)
-                loss              = loss + self.lambda_final_smooth*smooth_loss
+            if self.include_enc_loss:
+                enc_pred              = outputs[0]
+                final_pred            = outputs[1]
+                enc_pred_loss         = self.enc_pred_criterion(enc_pred, batch_y)
+                dec_pred_loss         = self.final_pred_criterion(final_pred, batch_y)
+                loss                  = enc_pred_loss + self.lambda_final_pred*dec_pred_loss
+                if self.final_smooth_criterion is not None:
+                    smooth_loss       = self.final_smooth_criterion(final_pred)
+                    loss              = loss + self.lambda_final_smooth*smooth_loss
 
-            return loss
+                return loss
+            else:
+                final_pred            = outputs[1]
+                loss                  = self.final_pred_criterion(final_pred, batch_y)
+                return loss
