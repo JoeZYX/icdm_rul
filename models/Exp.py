@@ -319,6 +319,7 @@ class Exp_TStransformer(object):
         loss_criterion = HTSLoss(enc_pred_loss          = self.args.enc_pred_loss, 
                                  final_pred_loss        = self.args.final_pred_loss, 
                                  seq_length             = self.args.sequence_length,
+                                 weight_type            = self.args.weight_type,
                                  sigma_faktor           = self.args.sigma_faktor,
                                  anteil                 = self.args.anteil,
                                  final_smooth_loss      = self.args.final_smooth_loss,

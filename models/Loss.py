@@ -11,26 +11,38 @@ import matplotlib.pyplot as plt
 
 class Weighted_MSE_Loss(nn.Module):
     
-    def __init__(self, seq_length=20, sigma_faktor=10, anteil=15,device = "cuda"):
+    def __init__(self, 
+                 seq_length=20, 
+                 weight_type="gaussian",
+                 sigma_faktor=10, 
+                 anteil=15,
+                 device = "cuda"):
 
         super(Weighted_MSE_Loss, self).__init__()
+        self.weight_type = weight_type
         self.seq_length = seq_length
-        self.sigma      = seq_length/sigma_faktor
+        if self.weight_type == "gaussian":
+
+            self.sigma      = seq_length/sigma_faktor
         
-        x = np.linspace(1, seq_length, seq_length)
-        #mu = self.seq_length/2
-        # mu = 0
-        mu = seq_length
-        y = stats.norm.pdf(x, mu, self.sigma)
-        #y = 2*np.max(y)-y
-        y = y + np.max(y)/anteil
-        print(anteil, sigma_faktor)
-        y = y/np.sum(y)*seq_length
-        plt.plot(x, y)
-        plt.show()
-        with torch.no_grad():
-            self.weights = torch.Tensor(y).double().to(device)  
-        #self.weights = torch.Tensor([1]*seq_length).double().to(device)  
+            x = np.linspace(1, seq_length, seq_length)
+
+            mu = seq_length
+            y = stats.norm.pdf(x, mu, self.sigma)
+            y = y + np.max(y)/anteil
+            print(anteil, sigma_faktor)
+            y = y/np.sum(y)*seq_length
+            plt.plot(x, y)
+            plt.show()
+            with torch.no_grad():
+                self.weights = torch.Tensor(y).double().to(device)  
+        elif self.weight_type == "last":
+            y = np.zeros(self.seq_length)
+            y[-1] = self.seq_length
+            with torch.no_grad():
+                self.weights = torch.Tensor(y).double().to(device)
+        else:
+            print( weight_type," is not implemented")
         
     def forward(self, pred, target):
         se  = (pred-target)**2
@@ -48,6 +60,7 @@ class HTSLoss(nn.Module):
                  enc_pred_loss = "MSE", 
                  final_pred_loss = "WeightMSE", 
                  seq_length = 40,
+                 weight_type = "gaussian",
                  sigma_faktor = 10,
                  anteil      = 15,
                  final_smooth_loss = None,
@@ -63,7 +76,7 @@ class HTSLoss(nn.Module):
         self.enc_pred_loss          = enc_pred_loss   
         print("enc_pred_criterion")
         if self.enc_pred_loss == "WeightMSE":
-            self.enc_pred_criterion     =  criterion_dict["WeightMSE"](seq_length, sigma_faktor, anteil,device)
+            self.enc_pred_criterion     =  criterion_dict["WeightMSE"](seq_length, weight_type, sigma_faktor, anteil, device)
         else:
             self.enc_pred_criterion     =  criterion_dict[self.enc_pred_loss]()
         if self.d_layers > 0:
@@ -73,7 +86,7 @@ class HTSLoss(nn.Module):
                 print("final_pred_loss")
                 if final_pred_loss == "WeightMSE":
                     print("WeightMSE")
-                    self.final_pred_criterion = criterion_dict["WeightMSE"](seq_length, sigma_faktor, anteil,device)
+                    self.final_pred_criterion = criterion_dict["WeightMSE"](seq_length, weight_type, sigma_faktor, anteil, device)
                 else:
                     self.final_pred_criterion = criterion_dict[self.final_pred_loss]()
             self.lambda_final_pred       = lambda_final_pred
