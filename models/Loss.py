@@ -9,6 +9,25 @@ import scipy.stats as stats
 import matplotlib.pyplot as plt
 
 
+class MSE_Smoothness_Loss(nn.Module):
+    
+    def __init__(self):
+        super(MSE_Smoothness_Loss, self).__init__()
+        self.conv1d = nn.Conv1d(1,1,2,bias=True)
+        self.conv1d.weight.data = torch.tensor(np.array([[[-1,1]]])).double()
+        self.conv1d.bias.data = torch.tensor([1]).double()
+        self.conv1d.weight.requires_grad = False
+        self.conv1d.bias.requires_grad = False
+
+        
+    def forward(self, pred):
+        smooth_error = self.conv1d(pred)**2
+        loss = smooth_error.mean()
+        return loss
+		
+
+
+
 class Weighted_MSE_Loss(nn.Module):
     
     def __init__(self, 
@@ -53,7 +72,8 @@ class Weighted_MSE_Loss(nn.Module):
 
 criterion_dict = {"MSE"            :nn.MSELoss,
                   "CrossEntropy"   :nn.CrossEntropyLoss,
-                  "WeightMSE"      :Weighted_MSE_Loss}
+                  "WeightMSE"      :Weighted_MSE_Loss,
+                  "smooth_mse"     :MSE_Smoothness_Loss}
 
 class HTSLoss(nn.Module):
     def __init__(self, 
@@ -63,7 +83,7 @@ class HTSLoss(nn.Module):
                  weight_type = "gaussian",
                  sigma_faktor = 10,
                  anteil      = 15,
-                 final_smooth_loss = None,
+                 smooth_loss = None,
                  d_layers = 2, 
                  lambda_final_pred = 2,
                  lambda_final_smooth = 1,
@@ -74,11 +94,17 @@ class HTSLoss(nn.Module):
         self.d_layers               = d_layers
         self.include_enc_loss       = include_enc_loss
         self.enc_pred_loss          = enc_pred_loss   
+        self.smooth_loss            = smooth_loss
         print("enc_pred_criterion")
         if self.enc_pred_loss == "WeightMSE":
             self.enc_pred_criterion     =  criterion_dict["WeightMSE"](seq_length, weight_type, sigma_faktor, anteil, device)
         else:
             self.enc_pred_criterion     =  criterion_dict[self.enc_pred_loss]()
+			
+        if smooth_loss is not None:
+            print("smooth_loss")
+            self.smooth_criterion       =  criterion_dict[smooth_loss]()
+
         if self.d_layers > 0:
             self.final_pred_loss        =  final_pred_loss  # this is a list , it can also be none, if it is none, d_layers should = 0
             self.final_pred_criterion   =  None
@@ -92,10 +118,10 @@ class HTSLoss(nn.Module):
             self.lambda_final_pred       = lambda_final_pred
 
 
-            self.final_smooth_loss      =  final_smooth_loss
+            self.smooth_loss      =  smooth_loss
 
-            if final_smooth_loss is not None:
-                print("final_smooth_loss")
+            if smooth_loss is not None:
+                print("smooth_loss")
                 self.final_smooth_criterion = None
             else:
                 self.final_smooth_criterion = None
@@ -110,6 +136,9 @@ class HTSLoss(nn.Module):
             enc_pred              = outputs[0]
             enc_pred_loss         = self.enc_pred_criterion(enc_pred, batch_y)
             loss                  = enc_pred_loss
+            if self.smooth_loss is not None:
+                smoothloss = self.smooth_criterion(enc_pred.unsqueeze(1))
+                loss       = loss + smoothloss
             return loss
         else : 
             # yes decoder, there are two predictions one is prediction from encoder "enc_pred"

@@ -322,7 +322,7 @@ class Exp_TStransformer(object):
                                  weight_type            = self.args.weight_type,
                                  sigma_faktor           = self.args.sigma_faktor,
                                  anteil                 = self.args.anteil,
-                                 final_smooth_loss      = self.args.final_smooth_loss,
+                                 smooth_loss            = self.args.smooth_loss,
                                  d_layers               = self.args.d_layers, 
                                  lambda_final_pred      = self.args.lambda_final_pred,
                                  lambda_final_smooth    = self.args.lambda_final_smooth,
