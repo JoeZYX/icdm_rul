@@ -103,7 +103,7 @@ class HTSLoss(nn.Module):
 			
         if smooth_loss is not None:
             print("smooth_loss")
-            self.smooth_criterion       =  criterion_dict[smooth_loss]()
+            self.smooth_criterion       =  criterion_dict[smooth_loss]().to(device)  
 
         if self.d_layers > 0:
             self.final_pred_loss        =  final_pred_loss  # this is a list , it can also be none, if it is none, d_layers should = 0
